@@ -24,7 +24,7 @@ func (c client) createPlaylist(ctx context.Context, playlistName string) (spotif
 	if err != nil {
 		return "", fmt.Errorf("getting userID: %w", err)
 	}
-	playlist, err := c.spotify.CreatePlaylistForUser(ctx, userID, playlistName, "", false, false)
+	playlist, err := c.spotify.CreatePlaylistForUser(ctx, userID, playlistName, "", true, false)
 	if err != nil {
 		return "", fmt.Errorf("creating playlist: %w", err)
 	}

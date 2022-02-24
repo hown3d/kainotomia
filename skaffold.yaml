@@ -1,0 +1,24 @@
+apiVersion: skaffold/v2beta26
+kind: Config
+metadata:
+  name: kainotomia
+build:
+  artifacts:
+  - image: quay.io/hown3d/kainotomia
+    ko:
+      main: "./cmd/callbackServer"
+      fromImage: gcr.io/distroless/static:nonroot
+
+deploy:
+  kubectl:
+    manifests:
+    - deploy/callback/deployment.yaml
+    - deploy/callback/secret.yaml
+
+profiles:
+  - name: debug
+    patches:
+      - op: replace
+        path: /build/artifacts/0/ko/fromImage
+        value: gcr.io/distroless/static:debug-nonroot
+

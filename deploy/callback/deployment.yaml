@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kainotomia-callback-server
+spec:
+  selector:
+    matchLabels:
+      app: kainotomia-callback-server
+  template:
+    metadata:
+      labels:
+        app: kainotomia-callback-server
+    spec:
+      containers:
+      - name: kainotomia-callback-server
+        image: quay.io/hown3d/kainotomia:callback
+        resources:
+          limits:
+            memory: "64Mi"
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+        envFrom:
+          - secretRef:
+              name: kainotomia-spotify
+        ports:
+        - containerPort: 8080
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: kainotomia-callback-service
+spec:
+  selector:
+    app: kainotomia-callback-server
+  ports:
+  - port: 8080
+    targetPort: 8080

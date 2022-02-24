@@ -4,12 +4,11 @@ import (
 	"log"
 
 	"github.com/hown3d/kainotomia/pkg/spotify/auth"
-	"golang.org/x/oauth2"
 )
 
 func main() {
-	tokenChan := make(chan *oauth2.Token)
-	err := auth.StartHTTPCallbackServer(tokenChan)
+	log.Println("Serving on :8080")
+	err := auth.StartHTTPCallbackServer()
 	if err != nil {
 		log.Fatal(err)
 	}
