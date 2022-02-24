@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+
+option go_package = "github.com/hown3d/kainotomia/proto/kainotomia/v1alpha1;kainotomia";
+
+package kainotomia.v1alpha1;
+
+service KainotomiaService {
+    rpc CreatePlaylist(CreatePlaylistRequest) returns (CreatePlaylistResponse);
+}
+
+message CreatePlaylistRequest {
+    repeated string artists = 1;
+    string name = 2;
+}
+
+message CreatePlaylistResponse {
+    string id = 1;
+}
+

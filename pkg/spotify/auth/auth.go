@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -18,7 +19,7 @@ import (
 )
 
 const (
-	redirectURL = "http://localhost:8080/callback"
+	redirectURL = "http://localhost:8081/callback"
 	clientID    = "2893fb6c7e2c44b8bd85a6a0a8d14033"
 )
 
@@ -28,12 +29,19 @@ var (
 	codeVerifier = generateCodeVerifier(32)
 )
 
-func StartHTTPCallbackServer(ch chan<- *oauth2.Token) error {
-	authenticator := newSpotifyAuthenticator()
+func StartHTTPCallbackServer(rawURL string, ch chan<- *oauth2.Token) error {
+	uri, err := url.Parse(rawURL)
+	if err != nil {
+		return err
+	}
+	authenticator, err := newSpotifyAuthenticator(uri)
+	if err != nil {
+		return err
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", authHandler(authenticator, ch))
 	mux.HandleFunc("/", redirectHandler(authenticator))
-	return http.ListenAndServe(":8080", mux)
+	return http.ListenAndServe(fmt.Sprintf(":%v", uri.Port()), mux)
 }
 
 func redirectHandler(authenticator *spotifyauth.Authenticator) func(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +50,6 @@ func redirectHandler(authenticator *spotifyauth.Authenticator) func(w http.Respo
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		log.Println("recived redirect")
 		w.Header().Add("Cache-Control", "no-cache")
 		http.Redirect(w, r, url, http.StatusPermanentRedirect)
 	}
@@ -78,12 +85,16 @@ func authHandler(authenticator *spotifyauth.Authenticator, ch chan<- *oauth2.Tok
 	}
 }
 
-func newSpotifyAuthenticator() *spotifyauth.Authenticator {
+func newSpotifyAuthenticator(uri *url.URL) (*spotifyauth.Authenticator, error) {
+	redirect, err := uri.Parse("/callback")
+	if err != nil {
+		return nil, err
+	}
 	return spotifyauth.New(
-		spotifyauth.WithRedirectURL(redirectURL),
+		spotifyauth.WithRedirectURL(redirect.String()),
 		spotifyauth.WithClientID(clientID),
 		spotifyauth.WithScopes(spotifyauth.ScopePlaylistModifyPublic),
-	)
+	), nil
 }
 
 func persistToken(w io.Writer, token *oauth2.Token) error {
