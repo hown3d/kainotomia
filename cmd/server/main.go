@@ -22,7 +22,7 @@ var port *int = flag.Int("port", 8080, "port to listen on")
 func main() {
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%v", *port))
 	if err != nil {
-		log.Fatalf("Failed to listen on port %v: %w", port, err)
+		log.Fatalf("Failed to listen on port %v: %v", port, err)
 	}
 
 	srv := grpc.NewServer(

@@ -100,7 +100,7 @@ func newSpotifyAuthenticator(uri *url.URL) (*spotifyauth.Authenticator, error) {
 func persistToken(w io.Writer, token *oauth2.Token) error {
 	data, err := json.Marshal(token)
 	if err != nil {
-		return fmt.Errorf("marshaling token", err)
+		return fmt.Errorf("marshaling token: %w", err)
 	}
 	_, err = w.Write(data)
 	if err != nil {
