@@ -13,13 +13,13 @@ spec:
     spec:
       containers:
       - name: kainotomia-api
-        image: quay.io/hown3d/kainotomia:latest
+        image: ghcr.io/hown3d/kainotomia/server:latest
+        imagePullPolicy: IfNotPresent
         resources:
           limits:
             memory: "64Mi"
           requests:
             memory: "32Mi"
-            cpu: "10m"
         ports:
         - containerPort: 8080
 
@@ -28,10 +28,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kainotomia-callback-service
+  name: kainotomia-api-service
 spec:
   selector:
-    app: kainotomia-callback-server
+    app: kainotomia-api-server
   ports:
   - port: 8080
     targetPort: 8080

@@ -1,0 +1,7 @@
+apiVersion: k3d.io/v1alpha4
+kind: Simple
+metadata:
+  name: kainotomia
+options:
+  k3d: # k3d runtime settings
+    disableLoadbalancer: true # same as `--no-lb`

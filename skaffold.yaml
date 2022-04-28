@@ -3,17 +3,35 @@ kind: Config
 metadata:
   name: kainotomia
 build:
+  local:
+    concurrency: 0
   artifacts:
-  - image: quay.io/hown3d/kainotomia
+  - image: ghcr.io/hown3d/kainotomia/job
     ko:
-      main: "./cmd/callbackServer"
-      fromImage: gcr.io/distroless/static:nonroot
-
+      main: "./cmd/job"
+      ldflags: 
+        - -s -w
+      dependencies:
+        paths: ["**/*.go"]
+        ignore: ["./cmd/server/**/*"]
+  - image: ghcr.io/hown3d/kainotomia/server
+    ko:
+      main: "./cmd/server"
+      ldflags: 
+        - -s -w
+      dependencies:
+        paths: ["**/*.go"]
+        ignore: ["./cmd/job/**/*"]
 deploy:
-  kubectl:
-    manifests:
-    - deploy/callback/deployment.yaml
-    - deploy/callback/secret.yaml
+  helm:
+    releases:
+      - name: test
+        artifactOverrides:
+          jobImage: ghcr.io/hown3d/kainotomia/job
+          image: ghcr.io/hown3d/kainotomia/server
+        chartPath: helm-chart/kainotomia
+        imageStrategy:
+          helm: {}
 
 profiles:
   - name: debug

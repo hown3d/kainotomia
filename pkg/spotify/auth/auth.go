@@ -13,9 +13,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hown3d/kainotomia/pkg/k8s"
 	"github.com/hown3d/kainotomia/pkg/random"
+	"github.com/hown3d/kainotomia/pkg/spotify"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/oauth2"
+
+	"k8s.io/client-go/kubernetes"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 const (
@@ -29,7 +34,7 @@ var (
 	codeVerifier = generateCodeVerifier(32)
 )
 
-func StartHTTPCallbackServer(rawURL string, ch chan<- *oauth2.Token) error {
+func StartHTTPCallbackServer(rawURL string, kubeClient kubernetes.Interface, namespace string) error {
 	uri, err := url.Parse(rawURL)
 	if err != nil {
 		return err
@@ -39,7 +44,7 @@ func StartHTTPCallbackServer(rawURL string, ch chan<- *oauth2.Token) error {
 		return err
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/callback", authHandler(authenticator, ch))
+	mux.HandleFunc("/callback", authHandler(authenticator, kubeClient.CoreV1().Secrets(namespace)))
 	mux.HandleFunc("/", redirectHandler(authenticator))
 	return http.ListenAndServe(fmt.Sprintf(":%v", uri.Port()), mux)
 }
@@ -55,7 +60,7 @@ func redirectHandler(authenticator *spotifyauth.Authenticator) func(w http.Respo
 	}
 }
 
-func authHandler(authenticator *spotifyauth.Authenticator, ch chan<- *oauth2.Token) func(w http.ResponseWriter, r *http.Request) {
+func authHandler(authenticator *spotifyauth.Authenticator, secretClient corev1.SecretInterface) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("recived auth")
 		st := r.FormValue("state")
@@ -79,7 +84,14 @@ func authHandler(authenticator *spotifyauth.Authenticator, ch chan<- *oauth2.Tok
 		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
 		// 	log.Fatal(err)
 		// }
-		ch <- token
+
+		spotifyClient, err := spotify.NewClient(token)
+		err = k8s.StoreTokenInSecret(r.Context(), secretClient, spotifyClient.UserID, token)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Println("error storing token, %w", err)
+			return
+		}
 		w.Header().Add("Cache-Control", "no-cache")
 		w.WriteHeader(http.StatusOK)
 	}
