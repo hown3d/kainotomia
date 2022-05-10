@@ -7,6 +7,23 @@ package kainotomia.v1alpha1;
 
 service KainotomiaService {
     rpc CreatePlaylist(CreatePlaylistRequest) returns (CreatePlaylistResponse);
+    rpc TriggerUpdate(TriggerUpdateRequest) returns (TriggerUpdateResponse);
+    rpc DeletePlaylist(DeletePlaylistRequest) returns (DeletePlaylistResponse);
+}
+
+
+message TriggerUpdateRequest {
+    string id = 1;
+}
+
+message TriggerUpdateResponse {}
+
+message DeletePlaylistRequest{
+    string id = 1;
+}
+
+message DeletePlaylistResponse {
+    
 }
 
 message CreatePlaylistRequest {

@@ -3,9 +3,7 @@ package auth
 import (
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -19,7 +17,6 @@ import (
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"golang.org/x/oauth2"
 
-	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
@@ -34,7 +31,7 @@ var (
 	codeVerifier = generateCodeVerifier(32)
 )
 
-func StartHTTPCallbackServer(rawURL string, kubeClient kubernetes.Interface, namespace string) error {
+func StartHTTPCallbackServer(rawURL string, secretsClient corev1.SecretInterface) error {
 	uri, err := url.Parse(rawURL)
 	if err != nil {
 		return err
@@ -44,7 +41,7 @@ func StartHTTPCallbackServer(rawURL string, kubeClient kubernetes.Interface, nam
 		return err
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/callback", authHandler(authenticator, kubeClient.CoreV1().Secrets(namespace)))
+	mux.HandleFunc("/callback", authHandler(authenticator, secretsClient))
 	mux.HandleFunc("/", redirectHandler(authenticator))
 	return http.ListenAndServe(fmt.Sprintf(":%v", uri.Port()), mux)
 }
@@ -73,25 +70,14 @@ func authHandler(authenticator *spotifyauth.Authenticator, secretClient corev1.S
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
-		// file, err := file.ForToken()
-		// if err != nil {
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	log.Fatal(err)
-		// }
-
-		// err = persistToken(file, token)
-		// if err != nil {
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	log.Fatal(err)
-		// }
-
 		spotifyClient, err := spotify.NewClient(token)
-		err = k8s.StoreTokenInSecret(r.Context(), secretClient, spotifyClient.UserID, token)
+		err = k8s.StoreTokenInSecret(r.Context(), secretClient, spotifyClient.UserID, *token)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			log.Println("error storing token, %w", err)
 			return
 		}
+
 		w.Header().Add("Cache-Control", "no-cache")
 		w.WriteHeader(http.StatusOK)
 	}
@@ -107,18 +93,6 @@ func newSpotifyAuthenticator(uri *url.URL) (*spotifyauth.Authenticator, error) {
 		spotifyauth.WithClientID(clientID),
 		spotifyauth.WithScopes(spotifyauth.ScopePlaylistModifyPublic),
 	), nil
-}
-
-func persistToken(w io.Writer, token *oauth2.Token) error {
-	data, err := json.Marshal(token)
-	if err != nil {
-		return fmt.Errorf("marshaling token: %w", err)
-	}
-	_, err = w.Write(data)
-	if err != nil {
-		return fmt.Errorf("writing token: %w", err)
-	}
-	return nil
 }
 
 func authURL(authenticator *spotifyauth.Authenticator) (string, error) {

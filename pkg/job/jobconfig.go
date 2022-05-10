@@ -15,8 +15,9 @@ const (
 )
 
 type Config struct {
-	PlaylistID string
-	Artists    []string
+	PlaylistID     string
+	Artists        []string
+	TokenSecretRef corev1.LocalObjectReference
 }
 
 func (c Client) storeJobConfig(ctx context.Context, name string, jobconfig Config, references []v1.OwnerReference) error {

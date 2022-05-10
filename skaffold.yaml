@@ -8,6 +8,9 @@ build:
   artifacts:
   - image: ghcr.io/hown3d/kainotomia/job
     ko:
+      platforms:
+      - linux/amd64
+      - linux/arm64
       main: "./cmd/job"
       ldflags: 
         - -s -w
@@ -16,6 +19,9 @@ build:
         ignore: ["./cmd/server/**/*"]
   - image: ghcr.io/hown3d/kainotomia/server
     ko:
+      platforms:
+      - linux/amd64
+      - linux/arm64
       main: "./cmd/server"
       ldflags: 
         - -s -w

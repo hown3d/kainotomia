@@ -5,10 +5,14 @@ grpc-lint:
 	@cd proto && buf lint
 
 cluster:
-	k3d cluster create -c k3d.config.yml
+	kind create cluster --name kainotomia || true
 
 cluster-delete:
-	k3d cluster delete -c k3d.config.yml
+	kind delete cluster --name kainotomia
 
-dev-deploy:
-	skaffold dev
+dev-deploy: cluster grpc-generate
+	skaffold dev --port-forward=services
+
+deps:
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest

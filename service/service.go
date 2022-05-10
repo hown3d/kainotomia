@@ -47,6 +47,14 @@ func (s Service) CreatePlaylist(ctx context.Context, req *kainotomia.CreatePlayl
 	}, nil
 }
 
+func (s Service) DeletePlaylist(ctx context.Context, req *kainotomia.DeletePlaylistRequest) (*kainotomia.DeletePlaylistResponse, error) {
+	panic("todo: implement")
+}
+
+func (s Service) TriggerUpdate(ctx context.Context, req *kainotomia.TriggerUpdateRequest) (*kainotomia.TriggerUpdateResponse, error) {
+	panic("todo: implement")
+}
+
 func spotifyClientFromToken(token *oauth2.Token) (spotify.Client, error) {
 	return spotify.NewClient(token)
 }

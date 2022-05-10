@@ -50,9 +50,9 @@ func main() {
 	kainotomiapb.RegisterKainotomiaServiceServer(srv, service)
 
 	go func() {
-		srvUrl := fmt.Sprintf("0.0.0.0:%v", authPort)
+		srvUrl := fmt.Sprintf("http://0.0.0.0:%v", *authPort)
 		log.Printf("serving token server on %v", srvUrl)
-		err := spotify_auth.StartHTTPCallbackServer(srvUrl, kubeclient, cfg.Namespace)
+		err := spotify_auth.StartHTTPCallbackServer(srvUrl, kubeclient.CoreV1().Secrets(cfg.Namespace))
 		if err != nil {
 			log.Fatal(err)
 		}

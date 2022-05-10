@@ -24,9 +24,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("unmarshaling job data: %v", err)
 	}
-
+	// TODO: create kubernetes config and load secret with token
 }
-
-func getJobConfig()
-
-func getToken()
