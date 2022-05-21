@@ -9,9 +9,10 @@ import (
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/hown3d/kainotomia/pkg/config"
 	"github.com/hown3d/kainotomia/pkg/k8s"
-	spotify_auth "github.com/hown3d/kainotomia/pkg/spotify/auth"
+	"github.com/hown3d/kainotomia/pkg/oauth"
+	"github.com/hown3d/kainotomia/pkg/spotify"
 	"github.com/hown3d/kainotomia/service"
-	"github.com/hown3d/kainotomia/service/auth"
+	spotifyauth "github.com/zmb3/spotify/v2/auth"
 
 	"github.com/authzed/grpcutil"
 
@@ -33,26 +34,30 @@ func main() {
 	}
 
 	srv := grpc.NewServer(
-		grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(auth.SpotifyAuthFunc)),
-		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(auth.SpotifyAuthFunc)),
+		grpc.StreamInterceptor(grpc_auth.StreamServerInterceptor(service.SpotifyAuthFunc)),
+		grpc.UnaryInterceptor(grpc_auth.UnaryServerInterceptor(service.SpotifyAuthFunc)),
 	)
 	reflection.Register(grpcutil.NewAuthlessReflectionInterceptor(srv))
 
 	cfg := config.Parse()
+
+	spotifyAuth := spotify.NewDefaultAuthenticator(spotifyauth.WithRedirectURL(cfg.RedirectURL))
 	kubeclient, err := k8s.NewClientSet()
 	if err != nil {
 		log.Fatal(fmt.Errorf("creating new kubernetes client set: %w", err))
 	}
-	service, err := service.New(cfg, kubeclient)
+
+	service, err := service.New(cfg, kubeclient, spotifyAuth)
 	if err != nil {
 		log.Fatal(err)
 	}
 	kainotomiapb.RegisterKainotomiaServiceServer(srv, service)
 
 	go func() {
-		srvUrl := fmt.Sprintf("http://0.0.0.0:%v", *authPort)
-		log.Printf("serving token server on %v", srvUrl)
-		err := spotify_auth.StartHTTPCallbackServer(srvUrl, kubeclient.CoreV1().Secrets(cfg.Namespace))
+		log.Printf("serving token server on :%d", *authPort)
+		secretsClient := kubeclient.CoreV1().Secrets(cfg.Namespace)
+		srv := oauth.NewServer(*authPort, secretsClient, spotifyAuth)
+		err := srv.Start()
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hown3d/kainotomia/pkg/job"
+	"github.com/hown3d/kainotomia/pkg/k8s/job"
 	"gopkg.in/yaml.v3"
 )
 

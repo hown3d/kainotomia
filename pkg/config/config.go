@@ -5,8 +5,9 @@ import (
 )
 
 type Config struct {
-	JobImage  string `env:"KAINOTOMIA_JOB_IMAGE"`
-	Namespace string `env:"KAINOTOMIA_NAMESPACE"`
+	JobImage    string `env:"KAINOTOMIA_JOB_IMAGE"`
+	Namespace   string `env:"KAINOTOMIA_NAMESPACE"`
+	RedirectURL string `env:"KAINOTOMIA_REDIRECT_URL"`
 }
 
 func Parse() Config {

@@ -60,4 +60,3 @@ func (c Client) addTracksToPlaylist(ctx context.Context, playlistID spotify.ID, 
 	_, err := c.spotify.AddTracksToPlaylist(ctx, playlistID, trackIDs...)
 	return err
 }
-

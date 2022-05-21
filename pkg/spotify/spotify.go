@@ -5,21 +5,29 @@ import (
 	"fmt"
 
 	"github.com/zmb3/spotify/v2"
-	spotifyauth "github.com/zmb3/spotify/v2/auth"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 )
 
+// SpotifyClient is the interface to interact with spotify
+type SpotifyClient interface {
+	CurrentUser(ctx context.Context) (*spotify.PrivateUser, error)
+	Search(ctx context.Context, query string, t spotify.SearchType, opts ...spotify.RequestOption) (*spotify.SearchResult, error)
+	GetAlbumTracks(ctx context.Context, id spotify.ID, opts ...spotify.RequestOption) (*spotify.SimpleTrackPage, error)
+	CreatePlaylistForUser(ctx context.Context, userID string, playlistName string, description string, public bool, collaborative bool) (*spotify.FullPlaylist, error)
+	AddTracksToPlaylist(ctx context.Context, playlistID spotify.ID, trackIDs ...spotify.ID) (snapshotID string, err error)
+}
+
 type Client struct {
-	spotify *spotify.Client
+	spotify SpotifyClient
 	logger  *zap.SugaredLogger
 	UserID  string
 }
 
-func NewClient(token *oauth2.Token) (Client, error) {
+func NewClient(ctx context.Context, token *oauth2.Token, auth Authenticator) (Client, error) {
 	c := Client{
-		spotify: newSpotifyClient(context.Background(), token),
 		logger:  zap.L().Sugar(),
+		spotify: auth.SpotifyClient(ctx, token),
 	}
 	userID, err := c.getUserID(context.Background())
 	if err != nil {
@@ -27,11 +35,6 @@ func NewClient(token *oauth2.Token) (Client, error) {
 	}
 	c.UserID = userID
 	return c, nil
-}
-
-func newSpotifyClient(ctx context.Context, token *oauth2.Token) *spotify.Client {
-	httpClient := spotifyauth.New().Client(ctx, token)
-	return spotify.New(httpClient)
 }
 
 func (c Client) getUserID(ctx context.Context) (string, error) {
