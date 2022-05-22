@@ -67,7 +67,13 @@ func (s *Server) authHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spotifyClient, err := spotify.NewClient(r.Context(), token, s.spotifyAuth)
-	err = secrets.StoreToken(r.Context(), spotifyClient.UserID, *token, s.secretsClient)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("error creating spotify client, %w", err)
+		return
+	}
+
+	_, err = secrets.StoreToken(r.Context(), spotifyClient.UserID, *token, s.secretsClient)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("error storing token, %w", err)

@@ -20,7 +20,7 @@ const (
 )
 
 // StoreToken creates a new secret inside kubernetes which stores the oauth2 token.
-func StoreToken(ctx context.Context, userID string, token oauth2.Token, secretsClient coreClientV1.SecretInterface) error {
+func StoreToken(ctx context.Context, userID string, token oauth2.Token, secretsClient coreClientV1.SecretInterface) (*corev1.Secret, error) {
 	return createOrUpdateSecret(ctx, userID, token, secretsClient)
 }
 
@@ -30,9 +30,63 @@ func LoadToken(ctx context.Context, userID string, secretsClient coreClientV1.Se
 	if err != nil {
 		return oauth2.Token{}, fmt.Errorf("getting token secret %w", err)
 	}
+	return tokenFromSecret(secret)
+}
+
+func createOrUpdateSecret(ctx context.Context, userID string, token oauth2.Token, client coreClientV1.SecretInterface) (*corev1.Secret, error) {
+	// check if secret exists
+	getOpts := metav1.GetOptions{}
+	secret, err := client.Get(ctx, userID, getOpts)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			secret, err := secretFromToken(userID, token)
+			if err != nil {
+				return nil, fmt.Errorf("generating secret from token: %w", err)
+			}
+			return createSecret(ctx, secret, client)
+
+		} else {
+			return nil, fmt.Errorf("getting token secret: %w", err)
+		}
+	}
+
+	// secret exists, so check if the hashes are still the same
+	newSecret, err := secretFromToken(userID, token)
+	if err != nil {
+		return nil, fmt.Errorf("generating secret from token: %w", err)
+	}
+	changed, err := secretChanged(newSecret, secret)
+	if err != nil {
+		return nil, fmt.Errorf("checking if secret changed: %w", err)
+	}
+	if changed {
+		return updateSecret(ctx, newSecret, client)
+	}
+	return secret, nil
+}
+
+func secretFromToken(userID string, token oauth2.Token) (*corev1.Secret, error) {
+	secretData, err := tokenToMap(token)
+	if err != nil {
+		return nil, fmt.Errorf("parsing token into map: %w", err)
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: userID,
+		},
+		Data: secretData,
+	}
+	err = annotateSecretWithHash(secret)
+	if err != nil {
+		return nil, fmt.Errorf("annotating token secret with hash: %w", err)
+	}
+	return secret, nil
+}
+
+func tokenFromSecret(secret *corev1.Secret) (oauth2.Token, error) {
 	tokenData := secret.Data
 	expiryTime := new(time.Time)
-	err = expiryTime.UnmarshalText(tokenData[expirySecretKey])
+	err := expiryTime.UnmarshalText(tokenData[expirySecretKey])
 	if err != nil {
 		return oauth2.Token{}, fmt.Errorf("unmarshaling expiry time of token: %w", err)
 	}
@@ -44,67 +98,20 @@ func LoadToken(ctx context.Context, userID string, secretsClient coreClientV1.Se
 	}, nil
 }
 
-func createOrUpdateSecret(ctx context.Context, userID string, token oauth2.Token, client coreClientV1.SecretInterface) error {
-	// check if secret exists
-	getOpts := metav1.GetOptions{}
-	secret, err := client.Get(ctx, userID, getOpts)
+func createSecret(ctx context.Context, secret *corev1.Secret, client coreClientV1.SecretInterface) (*corev1.Secret, error) {
+	new, err := client.Create(ctx, secret, metav1.CreateOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
-			secret, err := secretFromToken(userID, token)
-			if err != nil {
-				return fmt.Errorf("generating secret from token: %w", err)
-			}
-			return createSecret(ctx, secret, client)
-
-		} else {
-			return fmt.Errorf("getting token secret: %w", err)
-		}
+		return nil, fmt.Errorf("creating new secret for token: %w", err)
 	}
-
-	// secret exists, so check if the hashes are still the same
-	newSecret, err := secretFromToken(userID, token)
-	if err != nil {
-		return fmt.Errorf("generating secret from token: %w", err)
-	}
-	changed, err := secretChanged(newSecret, secret)
-	if err != nil {
-		return fmt.Errorf("checking if secret changed: %w", err)
-	}
-	if changed {
-		return updateSecret(ctx, newSecret, client)
-	}
-	return nil
+	return new, nil
 }
 
-func secretFromToken(userID string, token oauth2.Token) (*corev1.Secret, error) {
-	secretData, err := tokenToMap(token)
+func updateSecret(ctx context.Context, secret *corev1.Secret, client coreClientV1.SecretInterface) (*corev1.Secret, error) {
+	updated, err := client.Update(ctx, secret, metav1.UpdateOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("parsing token into map: %w", err)
+		return nil, fmt.Errorf("creating new secret for token: %w", err)
 	}
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: userID,
-		},
-		Data: secretData,
-	}, nil
-}
-
-func createSecret(ctx context.Context, secret *corev1.Secret, client coreClientV1.SecretInterface) error {
-	var err error
-	_, err = client.Create(ctx, secret, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("creating new secret for token: %w", err)
-	}
-	return nil
-}
-
-func updateSecret(ctx context.Context, secret *corev1.Secret, client coreClientV1.SecretInterface) error {
-	var err error
-	_, err = client.Update(ctx, secret, metav1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("creating new secret for token: %w", err)
-	}
-	return nil
+	return updated, nil
 }
 
 type tokenMap map[string][]byte

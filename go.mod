@@ -1,12 +1,13 @@
 module github.com/hown3d/kainotomia
 
-go 1.17
+go 1.18
 
 require (
 	github.com/authzed/grpcutil v0.0.0-20220104222419-f813f77722e5
 	github.com/caarlos0/env/v6 v6.9.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
+	github.com/stretchr/testify v1.7.0
 	github.com/zmb3/spotify/v2 v2.0.1
 	go.uber.org/zap v1.10.0
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
@@ -21,6 +22,7 @@ require (
 require (
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -30,8 +32,8 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
